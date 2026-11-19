@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco Virtual Algoritmo | Sistema Bancario Interactivo</title>
+    
+    <!-- Tailwind CSS vía CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Configuración de Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            950: '#030712',
+                            900: '#0a0f1d',
+                            850: '#10182b',
+                            800: '#16213a',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Estilos Personalizados para Transiciones, Glassmorphism y Animaciones -->
+    <style>
+        body {
+            background-color: #030712;
+            color: #f8fafc;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.06) 0%, transparent 45%);
+        }
+
+        /* Glassmorphism Cards */
+        .glass-panel {
+            background: rgba(16, 24, 43, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-card-emerald {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(6, 78, 59, 0.35) 100%);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 20px 45px -10px rgba(16, 185, 129, 0.15);
+        }
+
+        /* Transiciones suaves de módulos (Fade + Slide) */
+        .module-view {
+            display: none;
+            opacity: 0;
+            transform: translateY(14px);
+            transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .module-view.active {
+            display: block;
+        }
+
+        .module-view.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Animación de entrega de billetes (Ciclo For) */
+        @keyframes dispenseBill {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .bill-item {
+            animation: dispenseBill 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* Shake animation para error de login */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0f1d;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        /* Patrón de tarjeta virtual */
+        .virtual-card-pattern {
+            background: 
+                radial-gradient(circle at 90% 10%, rgba(52, 211, 153, 0.28) 0%, transparent 45%),
+                radial-gradient(circle at 10% 90%, rgba(6, 182, 212, 0.22) 0%, transparent 45%),
+                linear-gradient(135deg, #064e3b 0%, #022c22 50%, #091526 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+
+    <!-- Contenedor de Notificaciones Toast -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- ===================================================================== -->
+    <!-- PANTALLA DE INICIO DE SESIÓN                                          -->
+    <!-- ===================================================================== -->
+    <section id="login-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-6 transition-all duration-500">
+        <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            
+            <!-- Panel Izquierdo: Identidad del Banco & Seguridad -->
+            <div class="lg:col-span-6 space-y-6">
+                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold tracking-wide">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    BANCA DIGITAL SEGURA
+                </div>
+
+                <div>
+                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                        BANCO VIRTUAL <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">ALGORITMO</span>
+                    </h1>
+                    <p class="mt-3 text-slate-400 text-sm sm:text-base leading-relaxed">
+                        Gestiona tus finanzas, realiza transferencias, retiros y consulta tus movimientos en tiempo real con total seguridad y respaldo.
+                    </p>
+                </div>
+
+                <!-- Tarjeta de Protección de Cuenta -->
+                <div class="glass-panel rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-shield-check text-emerald-400 text-lg"></i>
+                            <span class="text-sm font-bold text-white">Protección de Acceso Activa</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 text-xs font-semibold">
+                            Cifrado 256-bit
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Por tu seguridad, el sistema cuenta con verificación de identidad y bloqueo preventivo tras 3 intentos fallidos consecutivos.
+                    </p>
+
+                    <!-- Indicador visual de intentos -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                        <span class="text-xs text-slate-400">Intentos de seguridad disponibles (<span id="restantes-text" class="text-white font-semibold">3</span>/3):</span>
+                        <div class="flex items-center gap-2" id="attempt-dots">
+                            <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] transition-all"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] transition-all"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] transition-all"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: Formulario de Acceso -->
+            <div class="lg:col-span-6">
+                <div id="login-card" class="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-white">Inicio de Sesión</h2>
+                                <p class="text-xs text-slate-400">Ingresa a tu Sucursal Virtual</p>
+                            </div>
+                        </div>
+
+                        <!-- Botón de Autocompletar Credenciales de Prueba -->
+                        <button type="button" onclick="fillDemoCredentials()" title="Rellenar credenciales de prueba"
+                            class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/40 text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-key text-emerald-400"></i>
+                            <span>Demo: cliente01 / 7777</span>
+                        </button>
+                    </div>
+
+                    <!-- Formulario activo -->
+                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                        <div>
+                            <label for="login-user" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Usuario Bancario
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500">
+                                    <i class="fa-solid fa-user"></i>
+                                </span>
+                                <input type="text" id="login-user" required autocomplete="off" placeholder="Ej. cliente01"
+                                    class="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-slate-600 outline-none transition-all font-medium">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="login-pin" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                PIN de Seguridad (4 dígitos)
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500">
+                                    <i class="fa-solid fa-lock"></i>
+                                </span>
+                                <input type="password" id="login-pin" required maxlength="8" placeholder="••••"
+                                    class="w-full pl-11 pr-12 py-3.5 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-slate-600 outline-none transition-all font-mono tracking-widest">
+                                <button type="button" onclick="togglePinVisibility()" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300">
+                                    <i id="pin-eye-icon" class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Alerta dinámica de intentos -->
+                        <div id="login-feedback" class="hidden rounded-xl p-3.5 text-xs font-medium flex items-start gap-2.5"></div>
+
+                        <button type="submit" id="login-submit-btn"
+                            class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <span>Ingresar a mi Cuenta</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+
+                    <!-- Estado Bloqueado -->
+                    <div id="login-locked-state" class="hidden text-center py-6 space-y-4">
+                        <div class="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center text-2xl mx-auto">
+                            <i class="fa-solid fa-user-lock"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="text-lg font-bold text-rose-400">Acceso Bloqueado por Seguridad</h3>
+                            <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                                Has superado el límite máximo de 3 intentos fallidos. Por seguridad, tu acceso temporal ha sido restringido.
+                            </p>
+                        </div>
+                        <button type="button" onclick="resetLoginSimulation()"
+                            class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-all inline-flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-rotate-right text-emerald-400"></i>
+                            <span>Desbloquear e Intentar de Nuevo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- APLICACIÓN PRINCIPAL (DASHBOARD BANCARIO)                             -->
+    <!-- ===================================================================== -->
+    <div id="app-dashboard" class="hidden min-h-screen flex flex-col lg:flex-row">
+        
+        <!-- BARRA LATERAL (SIDEBAR) DE NAVEGACIÓN -->
+        <aside class="w-full lg:w-72 bg-slate-900/95 border-b lg:border-b-0 lg:border-r border-slate-800/80 flex flex-col justify-between shrink-0 z-30">
+            <div>
+                <!-- Logo y Header del Sidebar -->
+                <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-slate-950 font-black text-lg shadow-lg shadow-emerald-500/20">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-extrabold text-sm tracking-tight text-white leading-none">BANCO VIRTUAL</h1>
+                            <span class="text-xs font-bold text-emerald-400 tracking-widest">ALGORITMO</span>
+                        </div>
+                    </div>
+                    <!-- Botón menú móvil -->
+                    <button type="button" onclick="toggleMobileMenu()" class="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+
+                <!-- Resumen Rápido de Cuenta en Sidebar -->
+                <div class="p-4 mx-3 mt-4 rounded-2xl bg-slate-950/70 border border-slate-800/90">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>Cliente: <strong class="text-white">cliente01</strong></span>
+                        <span class="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Activo
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500">Saldo Disponible</div>
+                    <div id="sidebar-balance" class="text-xl font-extrabold text-emerald-400 font-mono tracking-tight mt-0.5">
+                        $2,000,000
+                    </div>
+                </div>
+
+                <!-- Navegación Principal -->
+                <nav id="sidebar-nav" class="hidden lg:block p-3 space-y-1.5 mt-2">
+                    <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        Menú Principal
+                    </div>
+
+                    <button type="button" onclick="switchModule('mod-2')" data-target="mod-2"
+                        class="nav-item active-nav w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group bg-emerald-500/15 border border-emerald-500/30 text-white">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-wallet"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Consulta de Saldo</span>
+                    </button>
+
+                    <button type="button" onclick="switchModule('mod-3')" data-target="mod-3"
+                        class="nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Retiro de Dinero</span>
+                    </button>
+
+                    <button type="button" onclick="switchModule('mod-4')" data-target="mod-4"
+                        class="nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-piggy-bank"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Depósito de Dinero</span>
+                    </button>
+
+                    <button type="button" onclick="switchModule('mod-6')" data-target="mod-6"
+                        class="nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Transferencias</span>
+                    </button>
+
+                    <button type="button" onclick="switchModule('mod-5')" data-target="mod-5"
+                        class="nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Historial de Movimientos</span>
+                    </button>
+
+                    <button type="button" onclick="switchModule('mod-7')" data-target="mod-7"
+                        class="nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Resumen Mensual</span>
+                    </button>
+
+                    <button type="button" onclick="switchModule('mod-1')" data-target="mod-1"
+                        class="nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent">
+                        <span class="nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </span>
+                        <span class="text-xs font-semibold text-white">Seguridad de Sesión</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Botón Cerrar Sesión -->
+            <div class="p-4 border-t border-slate-800/80">
+                <button type="button" onclick="logout()"
+                    class="w-full py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar Sesión Segura</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ÁREA DE CONTENIDO PRINCIPAL -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: SEGURIDAD DE SESIÓN                                            -->
+            <!-- ===================================================================== -->
+            <div id="mod-1" class="module-view space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-emerald-500">
+                    <h2 class="text-2xl font-bold text-white">Seguridad y Estado de Sesión</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Información de verificación y control de acceso de tu cuenta digital.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel rounded-2xl p-6 space-y-4">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                            Detalles de la Sesión Actual
+                        </h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between py-2 border-b border-slate-800">
+                                <span class="text-slate-400">Usuario Autenticado:</span>
+                                <span class="font-mono font-bold text-emerald-400">cliente01</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-800">
+                                <span class="text-slate-400">PIN de Seguridad:</span>
+                                <span class="font-mono text-white">•••• (Verificado)</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-800">
+                                <span class="text-slate-400">Intentos Fallidos Previos:</span>
+                                <span id="audit-attempts" class="font-mono font-bold text-white">0 / 3</span>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span class="text-slate-400">Estado de Seguridad:</span>
+                                <span class="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-semibold">Protegida</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between space-y-4">
+                        <div class="space-y-2">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-lock text-emerald-400"></i>
+                                Control de Acceso
+                            </h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Tu sesión está protegida con límite de 3 intentos fallidos. Si deseas validar nuevamente tus credenciales o cerrar tu sucursal virtual, puedes hacerlo desde aquí.
+                            </p>
+                        </div>
+                        <button type="button" onclick="logout()" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700 transition-all cursor-pointer">
+                            Volver a la Pantalla de Inicio de Sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: CONSULTA DE SALDO                                              -->
+            <!-- ===================================================================== -->
+            <div id="mod-2" class="module-view active visible space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-emerald-500">
+                    <h2 class="text-2xl font-bold text-white">Consulta de Saldo</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Visualiza tu saldo disponible en tiempo real y el estado actual de tu cuenta.</p>
+                </div>
+
+                <!-- Tarjeta Virtual + Estado de Cuenta -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Tarjeta Virtual Bancaria -->
+                    <div class="lg:col-span-7 virtual-card-pattern rounded-3xl p-6 sm:p-8 border border-emerald-400/30 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[250px]">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs uppercase tracking-widest text-emerald-300/80 font-semibold">Cuenta de Ahorros Digital</span>
+                                <h3 class="text-lg font-extrabold text-white tracking-wide mt-0.5">BANCO VIRTUAL ALGORITMO</h3>
+                            </div>
+                            <i class="fa-solid fa-wifi rotate-90 text-emerald-300/70 text-xl"></i>
+                        </div>
+
+                        <div class="my-6">
+                            <div class="text-xs text-emerald-200/70 mb-1">Saldo Disponible Actual (COP)</div>
+                            <div id="mod2-balance-display" class="text-3xl sm:text-5xl font-extrabold text-white font-mono tracking-tight">
+                                $2,000,000
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-end justify-between gap-4 pt-4 border-t border-white/10">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-emerald-200/60">Número de Cuenta</div>
+                                <div class="font-mono text-sm sm:text-base font-semibold text-white tracking-widest">4890 •••• •••• 7701</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-emerald-200/60">Titular</div>
+                                <div class="text-sm font-bold text-white uppercase">CLIENTE01</div>
+                            </div>
+                            <div id="mod2-card-badge" class="px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-200 text-xs font-bold">
+                                Cuenta Activa - Saludable
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estado Financiero & Accesos Rápidos -->
+                    <div class="lg:col-span-5 glass-panel rounded-3xl p-6 flex flex-col justify-between space-y-4">
+                        <div>
+                            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                                <i class="fa-solid fa-heart-pulse text-emerald-400"></i>
+                                Estado de tu Cuenta
+                            </h3>
+
+                            <div id="mod2-status-box" class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 mb-4">
+                                <div class="text-xs text-slate-400">Diagnóstico Financiero:</div>
+                                <div id="mod2-status-title" class="text-base font-bold text-emerald-400 mt-0.5">Cuenta Activa - Saludable</div>
+                                <p id="mod2-status-desc" class="text-xs text-slate-300 mt-1">Tu saldo supera los $500,000 COP. Puedes operar sin restricciones.</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                                    <span class="text-slate-400 block">Tipo de Cuenta</span>
+                                    <strong class="text-white font-semibold mt-0.5 block">Ahorros Digital</strong>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                                    <span class="text-slate-400 block">Cuota de Manejo</span>
+                                    <strong class="text-emerald-400 font-semibold mt-0.5 block">$0 / Mes</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accesos Rápidos -->
+                        <div class="grid grid-cols-3 gap-2 pt-2">
+                            <button type="button" onclick="switchModule('mod-3')" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-500/40 text-center transition-all cursor-pointer">
+                                <i class="fa-solid fa-money-bill-wave text-amber-400 text-sm mb-1 block"></i>
+                                <span class="text-[11px] font-semibold text-white">Retirar</span>
+                            </button>
+                            <button type="button" onclick="switchModule('mod-4')" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-500/40 text-center transition-all cursor-pointer">
+                                <i class="fa-solid fa-piggy-bank text-emerald-400 text-sm mb-1 block"></i>
+                                <span class="text-[11px] font-semibold text-white">Depositar</span>
+                            </button>
+                            <button type="button" onclick="switchModule('mod-6')" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-500/40 text-center transition-all cursor-pointer">
+                                <i class="fa-solid fa-paper-plane text-sky-400 text-sm mb-1 block"></i>
+                                <span class="text-[11px] font-semibold text-white">Transferir</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: RETIRO DE DINERO                                               -->
+            <!-- ===================================================================== -->
+            <div id="mod-3" class="module-view space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-amber-500">
+                    <h2 class="text-2xl font-bold text-white">Retiro de Efectivo</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Selecciona el monto y la denominación de billetes para realizar tu retiro de forma inmediata.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Panel de Configuración del Retiro -->
+                    <div class="lg:col-span-5 glass-panel rounded-2xl p-6 space-y-5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400">Saldo Disponible:</span>
+                            <span id="mod3-balance" class="font-mono font-bold text-emerald-400 text-base">$2,000,000</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Selecciona un Monto Rápido
+                            </label>
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <button type="button" onclick="setWithdrawAmount(100000)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-amber-500/20 border border-slate-800 hover:border-amber-500/40 text-xs font-mono font-bold text-white transition-all cursor-pointer">$100,000</button>
+                                <button type="button" onclick="setWithdrawAmount(250000)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-amber-500/20 border border-slate-800 hover:border-amber-500/40 text-xs font-mono font-bold text-white transition-all cursor-pointer">$250,000</button>
+                                <button type="button" onclick="setWithdrawAmount(500000)" class="py-2.5 px-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs font-mono font-bold text-amber-300 transition-all cursor-pointer">$500,000</button>
+                                <button type="button" onclick="setWithdrawAmount(1000000)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-amber-500/20 border border-slate-800 hover:border-amber-500/40 text-xs font-mono font-bold text-white transition-all cursor-pointer">$1,000,000</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="withdraw-amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Monto a Retirar (COP)
+                            </label>
+                            <input type="number" id="withdraw-amount" value="500000" step="50000" min="50000"
+                                class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-amber-500 text-white font-mono font-bold text-lg outline-none">
+                        </div>
+
+                        <div>
+                            <label for="withdraw-denom" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Denominación del Billete
+                            </label>
+                            <select id="withdraw-denom" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-amber-500 text-white font-mono text-sm outline-none">
+                                <option value="50000" selected>$50,000 COP (Estándar ATM)</option>
+                                <option value="20000">$20,000 COP</option>
+                                <option value="100000">$100,000 COP</option>
+                            </select>
+                        </div>
+
+                        <button type="button" id="btn-withdraw" onclick="executeWithdraw()"
+                            class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-money-bill-transfer"></i>
+                            <span>Confirmar y Dispensar Efectivo</span>
+                        </button>
+                    </div>
+
+                    <!-- Simulador Visual del Dispensador -->
+                    <div class="lg:col-span-7 glass-panel rounded-2xl p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-money-bill-wave text-amber-400"></i>
+                                Dispensador de Billetes
+                            </h3>
+                            <span id="withdraw-counter-badge" class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
+                                Listo para operar
+                            </span>
+                        </div>
+
+                        <div id="dispenser-console" class="flex-1 bg-slate-950/90 rounded-2xl p-4 border border-slate-800 min-h-[280px] max-h-[360px] overflow-y-auto space-y-2 font-mono text-xs">
+                            <div class="text-slate-500 text-center py-16">
+                                <i class="fa-solid fa-money-bills text-3xl text-slate-700 mb-2 block"></i>
+                                Configura el monto y presiona <strong>"Confirmar y Dispensar Efectivo"</strong> para recibir tus billetes.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: DEPÓSITO DE DINERO                                             -->
+            <!-- ===================================================================== -->
+            <div id="mod-4" class="module-view space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-emerald-500">
+                    <h2 class="text-2xl font-bold text-white">Depósito de Fondos</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Abona dinero a tu cuenta de ahorros digital de forma instantánea y segura.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-6 glass-panel rounded-2xl p-6 space-y-5">
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                            <div>
+                                <div class="text-xs text-slate-400">Saldo Actual en Cuenta</div>
+                                <div id="mod4-balance" class="text-2xl font-extrabold text-emerald-400 font-mono">$2,000,000</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                                <i class="fa-solid fa-vault"></i>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Abonos Rápidos
+                            </label>
+                            <div class="grid grid-cols-3 gap-2.5">
+                                <button type="button" onclick="addQuickDeposit(100000)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 transition-all cursor-pointer">+$100,000</button>
+                                <button type="button" onclick="addQuickDeposit(500000)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 transition-all cursor-pointer">+$500,000</button>
+                                <button type="button" onclick="addQuickDeposit(1000000)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 transition-all cursor-pointer">+$1,000,000</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="deposit-amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Monto Personalizado a Depositar (COP)
+                            </label>
+                            <input type="number" id="deposit-amount" placeholder="Ej. 350000"
+                                class="w-full px-4 py-3.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-emerald-500 text-white font-mono font-bold text-lg outline-none">
+                        </div>
+
+                        <div>
+                            <label for="deposit-concept" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                Concepto / Origen del Depósito
+                            </label>
+                            <input type="text" id="deposit-concept" value="Consignación en efectivo / Abono"
+                                class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-emerald-500 text-white text-sm outline-none">
+                        </div>
+
+                        <button type="button" onclick="executeDeposit()"
+                            class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>Confirmar Depósito</span>
+                        </button>
+                    </div>
+
+                    <!-- Comprobante e Información -->
+                    <div class="lg:col-span-6 glass-panel rounded-2xl p-6 flex flex-col justify-between space-y-4">
+                        <div class="space-y-4">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-receipt text-emerald-400"></i>
+                                Confirmación de Operación
+                            </h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Todos los depósitos realizados a través de la sucursal virtual se acreditan de forma inmediata y sin comisiones adicionales en tu cuenta principal.
+                            </p>
+
+                            <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Cuenta Destino:</span>
+                                    <span class="font-mono text-white font-semibold">4890 •••• •••• 7701</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Disponibilidad:</span>
+                                    <span class="text-emerald-400 font-semibold">Inmediata</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Costo de Transacción:</span>
+                                    <span class="text-white font-semibold">$0 COP</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="deposit-last-status" class="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400">
+                            <span class="font-semibold text-slate-300">Estado:</span> Aún no se han realizado depósitos en esta sesión.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: HISTORIAL DE MOVIMIENTOS                                       -->
+            <!-- ===================================================================== -->
+            <div id="mod-5" class="module-view space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-amber-500">
+                    <h2 class="text-2xl font-bold text-white">Historial de Movimientos</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Consulta el detalle cronológico de todos tus ingresos, retiros y transferencias.</p>
+                </div>
+
+                <!-- Filtros -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-400 mr-1">Filtrar por tipo:</span>
+                        <button type="button" onclick="renderHistory('TODOS')" id="filter-TODOS" class="history-filter px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all cursor-pointer">Todos</button>
+                        <button type="button" onclick="renderHistory('INGRESO')" id="filter-INGRESO" class="history-filter px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold text-xs transition-all cursor-pointer">Ingresos (+)</button>
+                        <button type="button" onclick="renderHistory('EGRESO')" id="filter-EGRESO" class="history-filter px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold text-xs transition-all cursor-pointer">Egresos (-)</button>
+                    </div>
+                    <div class="text-xs font-mono text-slate-400">
+                        Total mostrados: <span id="history-loop-count" class="text-emerald-400 font-bold">1</span> movimiento(s)
+                    </div>
+                </div>
+
+                <!-- Tabla de Movimientos -->
+                <div class="glass-panel rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-950/90 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
+                                    <th class="py-3.5 px-4 font-semibold">Ref.</th>
+                                    <th class="py-3.5 px-4 font-semibold">Fecha y Hora</th>
+                                    <th class="py-3.5 px-4 font-semibold">Tipo / Descripción</th>
+                                    <th class="py-3.5 px-4 font-semibold">Canal</th>
+                                    <th class="py-3.5 px-4 font-semibold text-right">Monto</th>
+                                    <th class="py-3.5 px-4 font-semibold text-right">Saldo Resultante</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body" class="divide-y divide-slate-800/70 text-xs sm:text-sm">
+                                <!-- Renderizado dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: TRANSFERENCIAS                                                 -->
+            <!-- ===================================================================== -->
+            <div id="mod-6" class="module-view space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-sky-500">
+                    <h2 class="text-2xl font-bold text-white">Transferencias Interbancarias</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Envía dinero de forma segura a cuentas propias o de terceros en cualquier entidad financiera.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <form onsubmit="executeTransfer(event)" class="lg:col-span-7 glass-panel rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <span class="text-xs text-slate-400">Cuenta Origen: <strong class="text-white font-mono">4890-7701</strong></span>
+                            <span class="text-xs text-slate-400">Disponible: <strong id="mod6-balance" class="text-emerald-400 font-mono text-sm">$2,000,000</strong></span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="transfer-bank" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    Banco Destino
+                                </label>
+                                <select id="transfer-bank" class="w-full px-3.5 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-sky-500 text-white text-sm outline-none">
+                                    <option value="Banco Virtual Algoritmo">Banco Virtual Algoritmo</option>
+                                    <option value="Bancolombia">Bancolombia</option>
+                                    <option value="Davivienda">Davivienda</option>
+                                    <option value="Nequi / Transfiya">Nequi / Transfiya</option>
+                                    <option value="Banco de Bogotá">Banco de Bogotá</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="transfer-account" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    Número de Cuenta Destino
+                                </label>
+                                <input type="text" id="transfer-account" required placeholder="Ej. 3001234567" maxlength="16"
+                                    class="w-full px-3.5 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-sky-500 text-white font-mono text-sm outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="transfer-holder" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    Titular / Concepto
+                                </label>
+                                <input type="text" id="transfer-holder" required placeholder="Ej. Pago Arriendo / María Pérez"
+                                    class="w-full px-3.5 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-sky-500 text-white text-sm outline-none">
+                            </div>
+
+                            <div>
+                                <label for="transfer-amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    Monto a Transferir (COP)
+                                </label>
+                                <input type="number" id="transfer-amount" required placeholder="Ej. 400000"
+                                    class="w-full px-3.5 py-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-sky-500 text-white font-mono font-bold text-base outline-none">
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                            class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-sm shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Enviar Transferencia</span>
+                        </button>
+                    </form>
+
+                    <!-- Comprobante y Protección -->
+                    <div class="lg:col-span-5 glass-panel rounded-2xl p-6 flex flex-col justify-between space-y-4">
+                        <div class="space-y-3">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-shield text-sky-400"></i>
+                                Protección Anti-Sobregiros
+                            </h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Nuestro sistema valida automáticamente tu saldo disponible y la validez de la cuenta destino antes de procesar cualquier envío de dinero.
+                            </p>
+                            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Tiempo de abono:</span>
+                                    <span class="text-sky-400 font-semibold">En línea / Inmediato</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Comisión interbancaria:</span>
+                                    <span class="text-white font-semibold">$0 COP</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="transfer-result-box" class="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400">
+                            Completa los datos del destinatario para realizar la transferencia.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- VISTA: RESUMEN MENSUAL                                                -->
+            <!-- ===================================================================== -->
+            <div id="mod-7" class="module-view space-y-6">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-amber-500">
+                    <h2 class="text-2xl font-bold text-white">Resumen y Extracto Mensual</h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">Balance financiero consolidado de tus ingresos, egresos y saldo neto del periodo.</p>
+                </div>
+
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-panel rounded-2xl p-5 border-t-2 border-t-emerald-500">
+                        <div class="text-xs text-slate-400 flex items-center justify-between">
+                            <span>Total Ingresos</span>
+                            <i class="fa-solid fa-arrow-trend-up text-emerald-400"></i>
+                        </div>
+                        <div id="summary-income" class="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono mt-2">$2,000,000</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Saldo inicial + Depósitos</div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-5 border-t-2 border-t-rose-500">
+                        <div class="text-xs text-slate-400 flex items-center justify-between">
+                            <span>Total Egresos</span>
+                            <i class="fa-solid fa-arrow-trend-down text-rose-400"></i>
+                        </div>
+                        <div id="summary-expense" class="text-xl sm:text-2xl font-extrabold text-rose-400 font-mono mt-2">$0</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Retiros + Transferencias</div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-5 border-t-2 border-t-sky-500">
+                        <div class="text-xs text-slate-400 flex items-center justify-between">
+                            <span>Total Operaciones</span>
+                            <i class="fa-solid fa-list-ol text-sky-400"></i>
+                        </div>
+                        <div id="summary-ops" class="text-xl sm:text-2xl font-extrabold text-white font-mono mt-2">1</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Transacciones registradas</div>
+                    </div>
+
+                    <div class="glass-card-emerald rounded-2xl p-5">
+                        <div class="text-xs text-emerald-200/80 flex items-center justify-between">
+                            <span>Balance Final Neto</span>
+                            <i class="fa-solid fa-scale-balanced text-emerald-300"></i>
+                        </div>
+                        <div id="summary-net" class="text-xl sm:text-2xl font-extrabold text-white font-mono mt-2">$2,000,000</div>
+                        <div class="text-[11px] text-emerald-200/70 mt-1">Ingresos - Egresos</div>
+                    </div>
+                </div>
+
+                <!-- Barra Comparativa Visual + Extracto -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-5 glass-panel rounded-2xl p-6 flex flex-col justify-between space-y-5">
+                        <div class="space-y-4">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-chart-pie text-amber-400"></i>
+                                Proporción Ingresos vs Egresos
+                            </h3>
+
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs font-semibold">
+                                    <span class="text-emerald-400">Ingresos (<span id="pct-income">100%</span>)</span>
+                                    <span class="text-rose-400">Egresos (<span id="pct-expense">0%</span>)</span>
+                                </div>
+                                <div class="w-full h-4 rounded-full bg-slate-950 overflow-hidden flex border border-slate-800">
+                                    <div id="bar-income" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-500" style="width: 100%"></div>
+                                    <div id="bar-expense" class="bg-gradient-to-r from-rose-500 to-orange-500 h-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-400 leading-relaxed">
+                            Este extracto consolida en tiempo real todos los movimientos efectuados durante el periodo actual en tu cuenta <strong class="text-white font-mono">4890-7701</strong>.
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 glass-panel rounded-2xl p-6">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-file-invoice-dollar text-emerald-400"></i>
+                            Extracto Estructurado del Periodo
+                        </h3>
+                        <div class="overflow-x-auto max-h-[260px] overflow-y-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-slate-400 uppercase">
+                                        <th class="py-2.5 px-3">Categoría</th>
+                                        <th class="py-2.5 px-3">Detalle</th>
+                                        <th class="py-2.5 px-3 text-right">Impacto</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summary-table-body" class="divide-y divide-slate-800/60">
+                                    <!-- Llenado dinámico -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- LÓGICA INTERNA DE LA APLICACIÓN                                       -->
+    <!-- ===================================================================== -->
+    <script>
+        const CREDENCIALES = { usuario: "cliente01", pin: "7777" };
+
+        let state = {
+            intentosMaximos: 3,
+            intentosActuales: 0,
+            accesoConcedido: false,
+            saldoCuenta: 2000000,
+            movimientos: [
+                {
+                    id: 1,
+                    fecha: obtenerFechaHoraActual(),
+                    tipo: "INGRESO",
+                    titulo: "Apertura de Cuenta / Saldo Inicial",
+                    canal: "Sucursal Digital",
+                    monto: 2000000,
+                    saldoResultante: 2000000
+                }
+            ]
+        };
+
+        function formatCOP(valor) {
+            return "$" + Math.round(valor).toLocaleString("en-US");
+        }
+
+        function obtenerFechaHoraActual() {
+            const ahora = new Date();
+            return ahora.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) +
+                " • " + ahora.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        }
+
+        function showToast(mensaje, tipo = "success") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+
+            const estilos = {
+                success: "bg-slate-900/95 border-emerald-500/50 text-emerald-300 shadow-emerald-500/10",
+                error: "bg-slate-900/95 border-rose-500/50 text-rose-300 shadow-rose-500/10",
+                info: "bg-slate-900/95 border-sky-500/50 text-sky-300 shadow-sky-500/10"
+            };
+
+            const iconos = {
+                success: "fa-circle-check text-emerald-400",
+                error: "fa-circle-exclamation text-rose-400",
+                info: "fa-circle-info text-sky-400"
+            };
+
+            toast.className = `pointer-events-auto p-4 rounded-2xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-xs font-medium transition-all duration-300 transform translate-x-full opacity-0 ${estilos[tipo]}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconos[tipo]} text-base shrink-0"></i>
+                <span class="leading-snug">${mensaje}</span>
+            `;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove("translate-x-full", "opacity-0"));
+
+            setTimeout(() => {
+                toast.classList.add("translate-x-full", "opacity-0");
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // 1. INICIO DE SESIÓN
+        function fillDemoCredentials() {
+            document.getElementById("login-user").value = CREDENCIALES.usuario;
+            document.getElementById("login-pin").value = CREDENCIALES.pin;
+            showToast("Credenciales de prueba cargadas (cliente01 / 7777)", "info");
+        }
+
+        function togglePinVisibility() {
+            const input = document.getElementById("login-pin");
+            const icon = document.getElementById("pin-eye-icon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
+
+        function updateAttemptsUI() {
+            const restantes = state.intentosMaximos - state.intentosActuales;
+            document.getElementById("restantes-text").textContent = restantes;
+
+            const dotsContainer = document.getElementById("attempt-dots");
+            dotsContainer.innerHTML = "";
+            for (let i = 0; i < state.intentosMaximos; i++) {
+                const dot = document.createElement("span");
+                dot.className = i < restantes
+                    ? "w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] transition-all"
+                    : "w-3 h-3 rounded-full bg-rose-500/40 border border-rose-500 transition-all";
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const usuarioIngresado = document.getElementById("login-user").value.trim();
+            const pinIngresado = document.getElementById("login-pin").value.trim();
+            const feedback = document.getElementById("login-feedback");
+            const card = document.getElementById("login-card");
+
+            while (state.intentosActuales < state.intentosMaximos && !state.accesoConcedido) {
+                if (usuarioIngresado === CREDENCIALES.usuario && pinIngresado === CREDENCIALES.pin) {
+                    state.accesoConcedido = true;
+                    updateAttemptsUI();
+
+                    feedback.className = "rounded-xl p-3.5 text-xs font-medium flex items-center gap-2.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300";
+                    feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>¡Acceso concedido! Redirigiendo a tu cuenta...</span>`;
+                    feedback.classList.remove("hidden");
+
+                    showToast("¡Bienvenido cliente01! Sesión iniciada correctamente.", "success");
+
+                    setTimeout(() => {
+                        document.getElementById("login-screen").classList.add("hidden");
+                        document.getElementById("app-dashboard").classList.remove("hidden");
+                        document.getElementById("audit-attempts").textContent = `${state.intentosActuales} / ${state.intentosMaximos}`;
+                        syncAllViews();
+                        switchModule("mod-2");
+                    }, 600);
+                    return;
+                } else {
+                    state.intentosActuales++;
+                    updateAttemptsUI();
+
+                    card.classList.remove("animate-shake");
+                    void card.offsetWidth;
+                    card.classList.add("animate-shake");
+
+                    const restantes = state.intentosMaximos - state.intentosActuales;
+                    if (restantes > 0) {
+                        feedback.className = "rounded-xl p-3.5 text-xs font-medium flex items-center gap-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-300";
+                        feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> <span>Usuario o PIN incorrectos. Te quedan <strong>${restantes} intento(s)</strong>.</span>`;
+                        feedback.classList.remove("hidden");
+                        showToast(`Credenciales incorrectas. Restan ${restantes} intento(s).`, "error");
+                    } else {
+                        document.getElementById("login-form").classList.add("hidden");
+                        document.getElementById("login-locked-state").classList.remove("hidden");
+                        showToast("Has superado el límite de 3 intentos. Acceso bloqueado.", "error");
+                    }
+                    break;
+                }
+            }
+        }
+
+        function resetLoginSimulation() {
+            state.intentosActuales = 0;
+            state.accesoConcedido = false;
+            document.getElementById("login-user").value = "";
+            document.getElementById("login-pin").value = "";
+            document.getElementById("login-feedback").classList.add("hidden");
+            document.getElementById("login-locked-state").classList.add("hidden");
+            document.getElementById("login-form").classList.remove("hidden");
+            updateAttemptsUI();
+            showToast("Acceso desbloqueado. Puedes intentar nuevamente.", "info");
+        }
+
+        function logout() {
+            state.accesoConcedido = false;
+            state.intentosActuales = 0;
+            updateAttemptsUI();
+            document.getElementById("login-feedback").classList.add("hidden");
+            document.getElementById("login-user").value = "";
+            document.getElementById("login-pin").value = "";
+            document.getElementById("app-dashboard").classList.add("hidden");
+            document.getElementById("login-screen").classList.remove("hidden");
+            showToast("Sesión cerrada de forma segura.", "info");
+        }
+
+        // NAVEGACIÓN ENTRE SECCIONES
+        function toggleMobileMenu() {
+            document.getElementById("sidebar-nav").classList.toggle("hidden");
+        }
+
+        function switchModule(moduleId) {
+            document.querySelectorAll(".nav-item").forEach(btn => {
+                const iconBox = btn.querySelector(".nav-icon");
+                if (btn.dataset.target === moduleId) {
+                    btn.className = "nav-item active-nav w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group bg-emerald-500/15 border border-emerald-500/30 text-white";
+                    iconBox.className = "nav-icon w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center text-sm shrink-0";
+                } else {
+                    btn.className = "nav-item w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group hover:bg-slate-800/70 text-slate-300 border border-transparent";
+                    iconBox.className = "nav-icon w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0";
+                }
+            });
+
+            document.querySelectorAll(".module-view").forEach(view => {
+                view.classList.remove("visible", "active");
+            });
+
+            const targetView = document.getElementById(moduleId);
+            if (targetView) {
+                targetView.classList.add("active");
+                requestAnimationFrame(() => targetView.classList.add("visible"));
+            }
+
+            if (window.innerWidth < 1024) {
+                document.getElementById("sidebar-nav").classList.add("hidden");
+            }
+
+            syncAllViews();
+        }
+
+        // 2. CONSULTA DE SALDO Y SINCRONIZACIÓN
+        function syncAllViews() {
+            const saldoFormateado = formatCOP(state.saldoCuenta);
+
+            document.getElementById("sidebar-balance").textContent = saldoFormateado;
+            document.getElementById("mod2-balance-display").textContent = saldoFormateado;
+            document.getElementById("mod3-balance").textContent = saldoFormateado;
+            document.getElementById("mod4-balance").textContent = saldoFormateado;
+            document.getElementById("mod6-balance").textContent = saldoFormateado;
+
+            evaluarEstadoCuenta();
+            renderHistory("TODOS");
+            renderMonthlySummary();
+        }
+
+        function evaluarEstadoCuenta() {
+            const saldo = state.saldoCuenta;
+            const statusBox = document.getElementById("mod2-status-box");
+            const statusTitle = document.getElementById("mod2-status-title");
+            const statusDesc = document.getElementById("mod2-status-desc");
+            const cardBadge = document.getElementById("mod2-card-badge");
+
+            if (saldo > 500000) {
+                statusBox.className = "p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 mb-4 transition-all";
+                statusTitle.className = "text-base font-bold text-emerald-400 mt-0.5";
+                statusTitle.textContent = "Cuenta Activa - Saludable";
+                statusDesc.textContent = "Tu saldo supera los $500,000 COP. Puedes operar sin restricciones.";
+                cardBadge.className = "px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-200 text-xs font-bold";
+                cardBadge.textContent = "Cuenta Activa - Saludable";
+            } else if (saldo > 0) {
+                statusBox.className = "p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 mb-4 transition-all";
+                statusTitle.className = "text-base font-bold text-amber-400 mt-0.5";
+                statusTitle.textContent = "Saldo Bajo - Alerta";
+                statusDesc.textContent = "Tu saldo es igual o inferior a $500,000 COP. Te recomendamos realizar un depósito pronto.";
+                cardBadge.className = "px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-200 text-xs font-bold";
+                cardBadge.textContent = "Saldo Bajo - Alerta";
+            } else {
+                statusBox.className = "p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-4 transition-all";
+                statusTitle.className = "text-base font-bold text-rose-400 mt-0.5";
+                statusTitle.textContent = "Sin Fondos";
+                statusDesc.textContent = "El saldo de tu cuenta es $0 COP. Realiza un depósito para continuar operando.";
+                cardBadge.className = "px-3 py-1 rounded-full bg-rose-400/20 border border-rose-300/40 text-rose-200 text-xs font-bold";
+                cardBadge.textContent = "Sin Fondos";
+            }
+        }
+
+        // 3. RETIRO DE DINERO
+        let retiroEnProceso = false;
+
+        function setWithdrawAmount(monto) {
+            document.getElementById("withdraw-amount").value = monto;
+        }
+
+        async function executeWithdraw() {
+            if (retiroEnProceso) return;
+
+            const montoRetiro = parseInt(document.getElementById("withdraw-amount").value, 10);
+            const denominacionBillete = parseInt(document.getElementById("withdraw-denom").value, 10);
+            const consoleEl = document.getElementById("dispenser-console");
+            const badgeEl = document.getElementById("withdraw-counter-badge");
+            const btnWithdraw = document.getElementById("btn-withdraw");
+
+            if (isNaN(montoRetiro) || montoRetiro <= 0) {
+                showToast("Ingresa un monto válido mayor a cero.", "error");
+                return;
+            }
+
+            if (montoRetiro % denominacionBillete !== 0) {
+                showToast(`El monto debe ser múltiplo exacto de ${formatCOP(denominacionBillete)}.`, "error");
+                return;
+            }
+
+            if (montoRetiro > state.saldoCuenta) {
+                consoleEl.innerHTML = `
+                    <div class="p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300">
+                        <strong>Fondos insuficientes:</strong> Intentaste retirar ${formatCOP(montoRetiro)}, pero tu saldo disponible es ${formatCOP(state.saldoCuenta)}.
+                    </div>
+                `;
+                showToast("Fondos insuficientes para realizar este retiro.", "error");
+                return;
+            }
+
+            const cantidadDeBilletes = montoRetiro / denominacionBillete;
+            if (cantidadDeBilletes > 40) {
+                showToast("Por seguridad ATM, máximo 40 billetes por transacción.", "error");
+                return;
+            }
+
+            retiroEnProceso = true;
+            btnWithdraw.disabled = true;
+            btnWithdraw.classList.add("opacity-60", "cursor-not-allowed");
+
+            const saldoInicialOperacion = state.saldoCuenta;
+            consoleEl.innerHTML = `
+                <div class="text-amber-400 font-bold">=== INICIO DE TRANSACCIÓN ===</div>
+                <div class="text-slate-400">Saldo inicial: ${formatCOP(saldoInicialOperacion)} | Monto retiro: ${formatCOP(montoRetiro)}</div>
+                <div class="border-b border-slate-800 my-2"></div>
+            `;
+
+            for (let i = 1; i <= cantidadDeBilletes; i++) {
+                await new Promise(resolve => setTimeout(resolve, 140));
+                state.saldoCuenta -= denominacionBillete;
+
+                badgeEl.textContent = `Dispensando ${i} de ${cantidadDeBilletes}`;
+                document.getElementById("mod3-balance").textContent = formatCOP(state.saldoCuenta);
+                document.getElementById("sidebar-balance").textContent = formatCOP(state.saldoCuenta);
+
+                const line = document.createElement("div");
+                line.className = "bill-item p-2 rounded-lg bg-slate-900 border border-slate-800/90 flex items-center justify-between text-slate-200";
+                line.innerHTML = `
+                    <span><i class="fa-solid fa-money-bill-1-wave text-emerald-400 mr-2"></i>Entregando billete #<strong>${i}</strong> de <span class="text-amber-300">${formatCOP(denominacionBillete)}</span></span>
+                    <span class="text-slate-400">Saldo: <strong class="text-white">${formatCOP(state.saldoCuenta)}</strong></span>
+                `;
+                consoleEl.appendChild(line);
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            }
+
+            const summaryLine = document.createElement("div");
+            summaryLine.className = "mt-3 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold";
+            summaryLine.innerHTML = `=== TRANSACCIÓN EXITOSA === Total retirado: ${formatCOP(montoRetiro)} | Saldo final: ${formatCOP(state.saldoCuenta)}`;
+            consoleEl.appendChild(summaryLine);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+
+            registrarMovimiento("EGRESO", `Retiro ATM (${cantidadDeBilletes} billetes de ${formatCOP(denominacionBillete)})`, "Cajero Virtual", montoRetiro);
+
+            badgeEl.textContent = `Completado (${cantidadDeBilletes} billetes)`;
+            showToast(`Retiro exitoso por ${formatCOP(montoRetiro)} (${cantidadDeBilletes} billetes).`, "success");
+
+            retiroEnProceso = false;
+            btnWithdraw.disabled = false;
+            btnWithdraw.classList.remove("opacity-60", "cursor-not-allowed");
+        }
+
+        // 4. DEPÓSITO DE DINERO
+        function addQuickDeposit(monto) {
+            const input = document.getElementById("deposit-amount");
+            const actual = parseInt(input.value, 10) || 0;
+            input.value = actual + monto;
+        }
+
+        function executeDeposit() {
+            const deposito = parseFloat(document.getElementById("deposit-amount").value);
+            const concepto = document.getElementById("deposit-concept").value.trim() || "Depósito en cuenta";
+            const statusEl = document.getElementById("deposit-last-status");
+
+            if (!isNaN(deposito) && deposito > 0) {
+                state.saldoCuenta += deposito;
+                registrarMovimiento("INGRESO", concepto, "Sucursal Digital", deposito);
+
+                statusEl.className = "p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300";
+                statusEl.innerHTML = `<strong>Depósito Exitoso:</strong> Se abonaron <strong>${formatCOP(deposito)}</strong> a tu cuenta. Nuevo saldo: <strong>${formatCOP(state.saldoCuenta)}</strong>.`;
+
+                document.getElementById("deposit-amount").value = "";
+                showToast(`Depósito exitoso de ${formatCOP(deposito)}.`, "success");
+            } else {
+                statusEl.className = "p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300";
+                statusEl.innerHTML = `<strong>Operación Rechazada:</strong> El monto ingresado debe ser mayor a cero.`;
+                showToast("El monto a depositar debe ser mayor a cero.", "error");
+            }
+        }
+
+        // 5. HISTORIAL DE MOVIMIENTOS
+        function registrarMovimiento(tipo, titulo, canal, monto) {
+            state.movimientos.push({
+                id: state.movimientos.length + 1,
+                fecha: obtenerFechaHoraActual(),
+                tipo: tipo,
+                titulo: titulo,
+                canal: canal,
+                monto: monto,
+                saldoResultante: state.saldoCuenta
+            });
+            syncAllViews();
+        }
+
+        function renderHistory(filtro = "TODOS") {
+            document.querySelectorAll(".history-filter").forEach(btn => {
+                btn.className = "history-filter px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold text-xs transition-all cursor-pointer";
+            });
+            const activeBtn = document.getElementById(`filter-${filtro}`);
+            if (activeBtn) {
+                activeBtn.className = "history-filter px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs transition-all cursor-pointer";
+            }
+
+            const tbody = document.getElementById("history-table-body");
+            tbody.innerHTML = "";
+            let contador = 0;
+
+            for (let i = state.movimientos.length - 1; i >= 0; i--) {
+                const mov = state.movimientos[i];
+                if (filtro !== "TODOS" && mov.tipo !== filtro) continue;
+
+                contador++;
+                const esIngreso = mov.tipo === "INGRESO";
+                const colorMonto = esIngreso ? "text-emerald-400" : "text-rose-400";
+                const signo = esIngreso ? "+" : "-";
+                const badgeTipo = esIngreso
+                    ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">INGRESO</span>`
+                    : `<span class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 text-[10px] font-bold">EGRESO</span>`;
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-800/40 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-mono text-xs text-slate-400">#${String(mov.id).padStart(4, "0")}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-300 whitespace-nowrap">${mov.fecha}</td>
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-center gap-2">
+                            ${badgeTipo}
+                            <span class="font-medium text-white">${mov.titulo}</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-xs text-slate-400 whitespace-nowrap">${mov.canal}</td>
+                    <td class="py-3.5 px-4 font-mono font-bold text-right whitespace-nowrap ${colorMonto}">${signo}${formatCOP(mov.monto)}</td>
+                    <td class="py-3.5 px-4 font-mono font-semibold text-right text-white whitespace-nowrap">${formatCOP(mov.saldoResultante)}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById("history-loop-count").textContent = contador;
+
+            if (contador === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-xs text-slate-500">
+                            No hay movimientos registrados bajo el filtro seleccionado.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 6. TRANSFERENCIAS
+        function executeTransfer(event) {
+            event.preventDefault();
+
+            const banco = document.getElementById("transfer-bank").value;
+            const cuentaDestino = document.getElementById("transfer-account").value.trim();
+            const titular = document.getElementById("transfer-holder").value.trim();
+            const monto = parseFloat(document.getElementById("transfer-amount").value);
+            const resultBox = document.getElementById("transfer-result-box");
+
+            if (cuentaDestino.length < 6) {
+                resultBox.className = "p-4 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs text-amber-300";
+                resultBox.innerHTML = `<strong>Cuenta Inválida:</strong> El número de cuenta destino debe tener al menos 6 dígitos.`;
+                showToast("Número de cuenta destino inválido.", "error");
+                return;
+            }
+
+            if (isNaN(monto) || monto <= 0) {
+                resultBox.className = "p-4 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs text-amber-300";
+                resultBox.innerHTML = `<strong>Monto Inválido:</strong> El valor a transferir debe ser mayor a $0.`;
+                showToast("Ingresa un monto válido para transferir.", "error");
+                return;
+            }
+
+            if (monto <= state.saldoCuenta) {
+                state.saldoCuenta -= monto;
+                registrarMovimiento("EGRESO", `Transferencia a ${titular} (${banco} • ${cuentaDestino})`, "Transferencias", monto);
+
+                resultBox.className = "p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 space-y-1";
+                resultBox.innerHTML = `
+                    <div class="font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Transferencia Exitosa</div>
+                    <div>Destinatario: <strong>${titular}</strong> (${banco} - ${cuentaDestino})</div>
+                    <div>Monto enviado: <strong>${formatCOP(monto)}</strong> | Nuevo saldo: <strong>${formatCOP(state.saldoCuenta)}</strong></div>
+                `;
+
+                document.getElementById("transfer-account").value = "";
+                document.getElementById("transfer-holder").value = "";
+                document.getElementById("transfer-amount").value = "";
+
+                showToast(`Transferencia de ${formatCOP(monto)} enviada a ${titular}.`, "success");
+            } else {
+                resultBox.className = "p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 space-y-1";
+                resultBox.innerHTML = `
+                    <div class="font-bold"><i class="fa-solid fa-ban mr-1"></i> Fondos Insuficientes</div>
+                    <div>Intentaste transferir <strong>${formatCOP(monto)}</strong> pero tu saldo disponible es <strong>${formatCOP(state.saldoCuenta)}</strong>.</div>
+                `;
+                showToast("Fondos insuficientes para completar la transferencia.", "error");
+            }
+        }
+
+        // 7. RESUMEN MENSUAL
+        function renderMonthlySummary() {
+            let totalIngresos = 0;
+            let totalEgresos = 0;
+            const totalOperaciones = state.movimientos.length;
+
+            const tbody = document.getElementById("summary-table-body");
+            tbody.innerHTML = "";
+
+            for (let i = 0; i < state.movimientos.length; i++) {
+                const mov = state.movimientos[i];
+                if (mov.tipo === "INGRESO") {
+                    totalIngresos += mov.monto;
+                } else {
+                    totalEgresos += mov.monto;
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-800/30";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-semibold ${mov.tipo === 'INGRESO' ? 'text-emerald-400' : 'text-rose-400'}">${mov.tipo}</td>
+                    <td class="py-2.5 px-3 text-slate-300">${mov.titulo}</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-right ${mov.tipo === 'INGRESO' ? 'text-emerald-400' : 'text-rose-400'}">
+                        ${mov.tipo === 'INGRESO' ? '+' : '-'}${formatCOP(mov.monto)}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            const balanceFinal = totalIngresos - totalEgresos;
+            const flujoTotal = totalIngresos + totalEgresos;
+
+            const pctIngreso = flujoTotal > 0 ? Math.round((totalIngresos / flujoTotal) * 100) : 100;
+            const pctEgreso = flujoTotal > 0 ? 100 - pctIngreso : 0;
+
+            document.getElementById("summary-income").textContent = formatCOP(totalIngresos);
+            document.getElementById("summary-expense").textContent = formatCOP(totalEgresos);
+            document.getElementById("summary-ops").textContent = totalOperaciones;
+            document.getElementById("summary-net").textContent = formatCOP(balanceFinal);
+
+            document.getElementById("pct-income").textContent = `${pctIngreso}%`;
+            document.getElementById("pct-expense").textContent = `${pctEgreso}%`;
+            document.getElementById("bar-income").style.width = `${pctIngreso}%`;
+            document.getElementById("bar-expense").style.width = `${pctEgreso}%`;
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            updateAttemptsUI();
+        });
+    </script>
+</body>
+</html>
